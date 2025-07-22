@@ -1,0 +1,33 @@
+[20-Jul-2025 18:33:57 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT patient_id) AS count FROM visits
+[20-Jul-2025 18:33:57 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT patient_id) AS count FROM hearing_aid_fitting WHERE num_hearing_aids > 0
+[20-Jul-2025 18:33:57 Europe/Berlin] ERROR: Unknown column 'patient_id' in 'field list'
+[20-Jul-2025 18:35:58 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM visits
+[20-Jul-2025 18:35:58 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT patient_id) AS count FROM hearing_aid_fitting WHERE num_hearing_aids > 0
+[20-Jul-2025 18:35:58 Europe/Berlin] ERROR: Unknown column 'patient_id' in 'field list'
+[20-Jul-2025 18:36:17 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT shf_id) AS count FROM visits
+[20-Jul-2025 18:36:17 Europe/Berlin] ERROR: Unknown column 'shf_id' in 'field list'
+[20-Jul-2025 18:36:25 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM visits
+[20-Jul-2025 18:36:25 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT patient_id) AS count FROM hearing_aid_fitting WHERE num_hearing_aids > 0
+[20-Jul-2025 18:36:25 Europe/Berlin] ERROR: Unknown column 'patient_id' in 'field list'
+[20-Jul-2025 18:36:37 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM visits
+[20-Jul-2025 18:36:37 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM hearing_aid_fitting WHERE num_hearing_aids > 0
+[20-Jul-2025 18:36:37 Europe/Berlin] Executing query: SELECT SUM(CASE WHEN num_hearing_aids = '1' THEN 1 WHEN num_hearing_aids = '2' THEN 2 ELSE 0 END) AS total FROM hearing_aid_fitting
+[20-Jul-2025 18:36:37 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT city_id) AS count FROM users WHERE city_id IS NOT NULL
+[20-Jul-2025 18:36:37 Europe/Berlin] ERROR: Unknown column 'city_id' in 'field list'
+[20-Jul-2025 18:36:47 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM visits
+[20-Jul-2025 18:36:47 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM hearing_aid_fitting WHERE num_hearing_aids > 0
+[20-Jul-2025 18:36:47 Europe/Berlin] Executing query: SELECT SUM(CASE WHEN num_hearing_aids = '1' THEN 1 WHEN num_hearing_aids = '2' THEN 2 ELSE 0 END) AS total FROM hearing_aid_fitting
+[20-Jul-2025 18:36:47 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM users WHERE city_id IS NOT NULL
+[20-Jul-2025 18:36:47 Europe/Berlin] ERROR: Unknown column 'id' in 'field list'
+[20-Jul-2025 18:37:23 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM visits
+[20-Jul-2025 18:37:23 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM hearing_aid_fitting WHERE num_hearing_aids > 0
+[20-Jul-2025 18:37:23 Europe/Berlin] Executing query: SELECT SUM(CASE WHEN num_hearing_aids = '1' THEN 1 WHEN num_hearing_aids = '2' THEN 2 ELSE 0 END) AS total FROM hearing_aid_fitting
+[20-Jul-2025 18:37:23 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT city_id) AS count FROM patients WHERE city_id IS NOT NULL
+[20-Jul-2025 18:39:32 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT patient_id) AS count FROM visits
+[20-Jul-2025 18:39:32 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM hearing_aid_fitting WHERE num_hearing_aids > 0
+[20-Jul-2025 18:39:32 Europe/Berlin] Executing query: SELECT SUM(CASE WHEN num_hearing_aids = '1' THEN 1 WHEN num_hearing_aids = '2' THEN 2 ELSE 0 END) AS total FROM hearing_aid_fitting
+[20-Jul-2025 18:39:32 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT city_id) AS count FROM patients WHERE city_id IS NOT NULL
+[20-Jul-2025 18:40:29 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT patient_id) AS count FROM visits
+[20-Jul-2025 18:40:29 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT id) AS count FROM hearing_aid_fitting WHERE num_hearing_aids > 0
+[20-Jul-2025 18:40:29 Europe/Berlin] Executing query: SELECT SUM(CASE WHEN num_hearing_aids = '1' THEN 1 WHEN num_hearing_aids = '2' THEN 2 ELSE 0 END) AS total FROM hearing_aid_fitting
+[20-Jul-2025 18:40:29 Europe/Berlin] Executing query: SELECT COUNT(DISTINCT city_id) AS count FROM patients WHERE city_id IS NOT NULL
