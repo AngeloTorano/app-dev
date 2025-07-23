@@ -17,6 +17,7 @@ class PatientHistoryScreen extends StatefulWidget {
   State<PatientHistoryScreen> createState() => _PatientHistoryScreenState();
 }
 
+
 class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
   Map<String, List<Map<String, dynamic>>> phaseRecords = {};
   Map<String, bool> isExpandedMap = {};
@@ -280,29 +281,71 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
     if (val == 5) return 1;
     return 0;
   }
+  
+  List<String> _parseSides(String? value) {
+    return value?.toLowerCase().split(',').map((e) => e.trim()).toList() ?? [];
+  }
 
-    TableRow _otoscopyRow(String label, dynamic value) {
-      return TableRow(children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Text(label),
+  TableRow _otoscopyRow(String label, String? value) {
+  final sides = _parseSides(value);
+
+  return TableRow(
+    children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text(label),
+      ),
+      Center(
+        child: Radio<bool>(
+          value: true,
+          groupValue: sides.contains('left'),
+          onChanged: null, // disabled
         ),
-        Center(
-          child: Radio(
-            value: 'Left',
-            groupValue: value,
-            onChanged: null,
-          ),
+      ),
+      Center(
+        child: Radio<bool>(
+          value: true,
+          groupValue: sides.contains('right'),
+          onChanged: null, // disabled
         ),
-        Center(
-          child: Radio(
-            value: 'Right',
-            groupValue: value,
-            onChanged: null,
-          ),
-        ),
-      ]);
-    }
+      ),
+    ],
+  );
+}
+
+  String _aidConditionLabel(String key) {
+  switch (key) {
+    case 'Dead':
+      return 'Hearing Aid is Dead or Broken';
+    case 'Internal Feedback':
+      return 'Hearing Aid has Internal Feedback';
+    case 'Power Change Needed':
+      return 'Hearing Aid Power Change Needed';
+    case 'Lost/Stolen':
+      return 'Hearing Aid was Lost or Stolen';
+    case 'No Problem':
+      return 'No Problem with Hearing Aid';
+    default:
+      return key;
+  }
+}
+
+  String _earmoldConditionLabel(String key) {
+  switch (key) {
+    case 'Too Tight':
+      return 'Discomfort/Earmold too Tight';
+    case 'Too Loose':
+      return 'Feedback/Earmold too Loose';
+    case 'Cracked/Damaged':
+      return 'Earmold is Damaged or Tubing is Cracked';
+    case 'Lost/Stolen':
+      return 'Earmold was Lost or Stolen';
+    case 'No Problem':
+      return 'No Problem with Hearing Aid';
+    default:
+      return key;
+  }
+}
 
   Widget sectionTitle(String title) {
     return Container(
@@ -320,9 +363,14 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
     List<Widget> items = [];
     if (sections.containsKey('general_hearing_questions')) {
       items.add(phase1(sections));
-    } if (sections.containsKey('hearing_aid_fitting')) {
+    } 
+    /* if (sections.containsKey('hearing_aid_fitting')) {
       items.add(phase2(sections));
-      }else {
+    } */
+    if (sections.containsKey('aftercare_assessment')) {
+      items.add(phase3(sections));
+    }
+      else {
       sections.forEach((key, value) {
         if (key != 'visit' && value != null) {
           items.add(
@@ -349,12 +397,388 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: items);
   }
 
-  Widget phase2(Map<String, dynamic> data) {
+  Widget phase3(Map<String, dynamic> data) {
+    final earScreening= data['ear_screening'] ?? {};
+    final otoscopy = data['otoscopy'] ?? {};
+    final hearingAid = data['hearing_aid_fitting'] ?? {};
+    final aftercareEval = data['aftercare_assessment'] ?? {};
+    final List<String> leftAid = (aftercareEval['left_aid_issues'] as String?)?.split(',') ?? [];
+    final List<String> rightAid = (aftercareEval['right_aid_issues'] as String?)?.split(',') ?? [];
+    final List<String> leftEarmold = (aftercareEval['left_earmold_issues'] as String?)?.split(',') ?? [];
+    final List<String> rightEarmold = (aftercareEval['right_earmold_issues'] as String?)?.split(',') ?? [];
+   /*  
+    final hearingScreening = data['hearing_screening'] ?? {};
+    
+    final fittingQC = data['fitting_quality_control'] ?? {};
+    final counseling = data['counseling'] ?? {};
+    final finalQC = data['final_quality_control'] ?? {}; */
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 5),
+        sectionTitle('EAR SCREENING'),
+        const SizedBox(height: 10),
+        radioQuestion(  
+          "Ear Clear for Impressions:",
+          ["No", "Yes"],
+          earScreening['is_clear'] == 'Yes' ? 1 : 0,
+        ),
+
+        //EAR SCREENING/OTOSCOPY
+        const SizedBox(height: 5),
+        sectionTitle('OTOSCOPY'),
+        const SizedBox(height: 10),
+        Table(
+          columnWidths: const {
+            0: FlexColumnWidth(3), // Condition label
+            1: FlexColumnWidth(1), // Left
+            2: FlexColumnWidth(1), // Right
+          },
+          children: [
+            // Header row
+            const TableRow(
+              children: [
+                SizedBox(),
+                Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    'LEFT',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    'RIGHT',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            _otoscopyRow('Wax', otoscopy['wax']),
+            _otoscopyRow('Infection', otoscopy['infection']),
+            _otoscopyRow('Perforation', otoscopy['perforation']),
+            _otoscopyRow('Tinnitus', otoscopy['tinnitus']),
+            _otoscopyRow('Atresia', otoscopy['atresia']),
+            _otoscopyRow('Implant', otoscopy['implant']),
+            _otoscopyRow('Other', otoscopy['other']),
+            _otoscopyRow('Medical Recommendation', otoscopy['med_recommendation']),
+          ],
+        ),
+
+
+        const SizedBox(height: 16),
+        const Text('Medical Given:'),
+        Wrap(
+          spacing: 10,
+          children: ['Antibiotic', 'Analgesic', 'Antiseptic', 'Antifungal'].map((med) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Checkbox(
+                  value: otoscopy['medication_given']?.contains(med) ?? false,
+                  onChanged: null,
+                ),
+                Text(med),
+              ],
+            );
+          }).toList(),
+        ),
+
+        const SizedBox(height: 16),
+        const Text('Ears Clear for Assessment:'),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('LEFT:'),
+                const SizedBox(width: 12),
+                Radio(value: 'No', groupValue: otoscopy['ears_clear_for_assessment_left'], onChanged: null),
+                const Text('No'),
+                const SizedBox(width: 12),
+                Radio(value: 'Yes', groupValue: otoscopy['ears_clear_for_assessment_left'], onChanged: null),
+                const Text('Yes'),
+              ],
+            ),
+            Row(
+              children: [
+                const Text('RIGHT:'),
+                const SizedBox(width: 8),
+                Radio(value: 'No', groupValue: otoscopy['ears_clear_for_assessment_right'], onChanged: null),
+                const Text('No'),
+                const SizedBox(width: 12),
+                Radio(value: 'Yes', groupValue: otoscopy['ears_clear_for_assessment_right'], onChanged: null),
+                const Text('Yes'),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const Text('Comments:'),
+        const SizedBox(height: 8),
+        TextFormField(
+          initialValue: (otoscopy['comments'] == null || otoscopy['comments'].toString().trim().isEmpty)
+              ? 'N/A'
+              : otoscopy['comments'],
+          maxLines: 3,
+          enabled: false,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+        ),
+
+         //AFTERCARE ASSESSMENT
+        const SizedBox(height: 15),
+        sectionTitle('EVALUATION'),
+        const SizedBox(height: 10),
+        Table(
+          columnWidths: const {
+            0: FlexColumnWidth(3), // Condition label
+            1: FlexColumnWidth(1), // Left
+            2: FlexColumnWidth(1), // Right
+          },
+          border: TableBorder.all(color: Colors.grey.shade300),
+          children: [
+            // Header Row
+            const TableRow(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text(
+                    'HEARING AID',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text(
+                    'LEFT',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text(
+                    'RIGHT',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+
+            // Aid conditions
+            ...[
+              'Dead',
+              'Internal Feedback',
+              'Power Change Needed',
+              'Lost/Stolen',
+              'No Problem'
+            ].map((condition) {
+              return TableRow(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      _aidConditionLabel(condition),
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Center(
+                      child: leftAid.contains(condition) ? const Text('✅') : const Text(''),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Center(
+                      child: rightAid.contains(condition) ? const Text('✅') : const Text(''),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
+
+        const SizedBox(height: 10),
+        Table(
+          columnWidths: const {
+            0: FlexColumnWidth(3), // Condition label
+            1: FlexColumnWidth(1), // Left
+            2: FlexColumnWidth(1), // Right
+          },
+          border: TableBorder.all(color: Colors.grey.shade300),
+          children: [
+            // Header Row
+            const TableRow(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text(
+                    'EARMOLD',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text(
+                    'LEFT',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text(
+                    'RIGHT',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+
+            // Aid conditions
+            ...[
+              'Too Tight',
+              'Too Loose',
+              'Cracked/Damaged',
+              'Lost/Stolen',
+              'No Problem'
+            ].map((condition) {
+              return TableRow(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      _earmoldConditionLabel(condition),
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Center(
+                      child: leftEarmold.contains(condition) ? const Text('✅') : const Text(''),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Center(
+                      child: rightEarmold.contains(condition) ? const Text('✅') : const Text(''),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ],
+        ),
+        
+        //SERVICES COMPLETED
+        const SizedBox(height: 20),
+        sectionTitle("SERVICES COMPLETED"),
+        const SizedBox(height: 10),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        //HEARING AID FITTING
+        const SizedBox(height: 20),
+        sectionTitle("HEARING AID FITTING"),
+        const SizedBox(height: 10),
+        const Center(
+          child: Text(
+            "Results of Left and Right Ear",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Table(
+          border: TableBorder.all(color: Colors.grey),
+          columnWidths: const {
+            0: FlexColumnWidth(1),
+            1: FlexColumnWidth(1),
+            2: FlexColumnWidth(1),
+          },
+          children: [
+            TableRow(
+              children: [
+                _tableCell(""),
+                _tableCell("LEFT", bold: true, center: true),
+                _tableCell("RIGHT", bold: true, center: true),
+              ],
+            ),
+            TableRow(
+              children: [
+                _tableCell("Power Level"),
+                _tableCell(hearingAid['left_power_level'] ?? '-', center: true),
+                _tableCell(hearingAid['right_power_level'] ?? '-', center: true),
+              ],
+            ),
+            TableRow(
+              children: [
+                _tableCell("Volume"),
+                _tableCell(hearingAid['left_volume'] ?? '-', center: true),
+                _tableCell(hearingAid['right_volume'] ?? '-', center: true),
+              ],
+            ),
+            TableRow(
+              children: [
+                _tableCell("Battery"),
+                _tableCell(hearingAid['left_battery'] ?? '-', center: true),
+                _tableCell(hearingAid['right_battery'] ?? '-', center: true),
+              ],
+            ),
+            TableRow(
+              children: [
+                _tableCell("Earmold"),
+                _tableCell(hearingAid['left_earmold'] ?? '-', center: true),
+                _tableCell(hearingAid['right_earmold'] ?? '-', center: true),
+              ],
+            ),
+          ],
+        ),
+
+
+        
+
+        
+      ],
+    );
+  }
+
+
+
+  /* Widget phase2(Map<String, dynamic> data) {
     final earScreening = data['ear_screening'] ?? {};
     final otoscopy = data['otoscopy'] ?? {};
     final hearingScreening = data['hearing_screening'] ?? {};
-    final hearingAid = data['hearing_aid_fitting'];
-
+    final hearingAid = data['hearing_aid_fitting'] ?? {};
+    final fittingQC = data['fitting_quality_control'] ?? {};
+    final counseling = data['counseling'] ?? {};
+    final finalQC = data['final_quality_control'] ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,7 +856,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
         ),
 
         const SizedBox(height: 16),
-        const Text('Ears Clear for Impressions:'),
+        const Text('Ears Clear for Fitting:'),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -738,15 +1162,103 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
           ],
         ),
 
+        const Text('Comments:'),
+        const SizedBox(height: 8),
+        TextFormField(
+          initialValue: (hearingAid['notes'] == null || hearingAid['notes'].toString().trim().isEmpty)
+              ? 'N/A'
+              : hearingAid['notes'],
+          maxLines: 3,
+          enabled: false,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+        ),
+
+        //FITTING QUALITY CONTROL
+        const SizedBox(height: 15),
+        sectionTitle('FITTING QUALITY CONTROL'),
+        const SizedBox(height: 10),
+          radioQuestion(
+          "Patient Clear for Counseling:",
+          ["Yes", "No"],
+          fittingQC['is_clear_for_counseling'] == 'Yes' ? 1 : 0,
+        ),
+
+        //COUNSELING
+        const SizedBox(height: 15),
+        sectionTitle('COUNSELING'),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Radio<String>(
+              value: 'Yes',
+              groupValue: counseling['completed']?.toString(),
+              onChanged: null,
+              visualDensity: VisualDensity.compact,
+            ),
+            const Flexible(
+              child: Text('Patient completed counseling and received AfterCare information'),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            Radio<String>(
+              value: 'Yes',
+              groupValue: counseling['is_student_ambassador']?.toString(),
+              onChanged: null,
+              visualDensity: VisualDensity.compact,
+            ),
+            const Flexible(
+              child: Text('Patient has been trained as a Student Ambassador'),
+            ),
+          ],
+        ),
+
+        //FINAL QUALITY CONTROL
+        const SizedBox(height: 15),
+        sectionTitle('FINAL QUALITY CONTROL'),
+        const SizedBox(height: 10),
+        const Text('Number of batteries provided:'),
+        const SizedBox(height: 10),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            const Text('13 = '),
+            Container(
+              width: 50,
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(width: 1)),
+              ),
+              child: Text(
+                finalQC['battery_13']?.toString() ?? '',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+            const SizedBox(width: 30),
+            const Text('675 = '),
+            Container(
+              width: 50,
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(width: 1)),
+              ),
+              child: Text(
+                finalQC['battery_675']?.toString() ?? '',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        ),
 
         
       ],
     );
   }
-
-
-
-  TableRow _hearingTypeRow(String type, dynamic leftType, dynamic rightType) {
+ */
+  /* TableRow _hearingTypeRow(String type, dynamic leftType, dynamic rightType) {
     return TableRow(children: [
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
@@ -768,8 +1280,7 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
       ),
     ]);
   }
-
-
+ */
   Widget _tableCell(String text, {bool bold = false, bool center = false}) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -782,7 +1293,6 @@ class _PatientHistoryScreenState extends State<PatientHistoryScreen> {
       ),
     );
   }
-
 
   Widget phase1(Map<String, dynamic> data) {
     final earScreening = data['ear_screening'] ?? {};
