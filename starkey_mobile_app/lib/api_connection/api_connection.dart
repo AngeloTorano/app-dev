@@ -3,7 +3,7 @@ class ApiConnection {
   // static const hostConnect = 'http://192.168.1.2/api_starkey'; // bahay
   // static const hostConnect = 'http://192.168.195.83/api_starkey'; // school
   static const hostConnect =
-      'http://192.168.1.62/api_starkeyhf'; // 🔍 Make sure this IP is correct
+      'http://192.168.1.10/api_starkeyhf'; // 🔍 Make sure this IP is correct
 
   static const hostConnectUser = "$hostConnect/user";
 
