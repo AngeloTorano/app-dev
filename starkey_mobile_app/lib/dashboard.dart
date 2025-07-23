@@ -376,7 +376,7 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
         map.addControl(new tt.FullscreenControl());
         map.addControl(new tt.NavigationControl());
 
-        ${markersJS}
+        $markersJS
     </script>
 </body>
 </html>
