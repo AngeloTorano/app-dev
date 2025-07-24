@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'api_connection/api_connection.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 
 class Dashboard extends StatefulWidget {
   final Map<String, dynamic>? userData;
@@ -20,7 +21,8 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  File? _avatarImage;
+  String? _avatarUrl;
+  bool _isLoadingAvatar = false;
 
   @override
   void initState() {
@@ -29,13 +31,40 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> _loadAvatar() async {
-    final prefs = await SharedPreferences.getInstance();
-    final path = prefs.getString('avatar_path');
-    if (path != null && File(path).existsSync()) {
-      setState(() {
-        _avatarImage = File(path);
-      });
+    final userData = widget.userData;
+    if (userData == null || userData['UserID'] == null) return;
+
+    setState(() => _isLoadingAvatar = true);
+
+    try {
+      final userId = userData['UserID'].toString();
+      final response = await http.post(
+        Uri.parse(ApiConnection.uploadAvatar),
+        body: {'action': 'get', 'user_id': userId},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['status'] == 'success') {
+          setState(() => _avatarUrl = data['data']['avatar_url']);
+        }
+      }
+    } finally {
+      setState(() => _isLoadingAvatar = false);
     }
+  }
+
+  ImageProvider _getAvatarImageProvider() {
+    if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
+      return NetworkImage(_avatarUrl!);
+    }
+
+    final userAvatarUrl = widget.userData?['avatar'];
+    if (userAvatarUrl != null && userAvatarUrl.isNotEmpty) {
+      return NetworkImage(userAvatarUrl);
+    }
+
+    return const AssetImage('assets/user_profile.png');
   }
 
   Future<Map<String, int>> fetchStatistics() async {
@@ -74,13 +103,14 @@ class _DashboardState extends State<Dashboard> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          setState(() {});
+          await _loadAvatar();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             children: [
-              Padding(
+              Container(
+                color: const Color.fromRGBO(20, 104, 132, 1),
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
@@ -93,17 +123,29 @@ class _DashboardState extends State<Dashboard> {
                                 UserProfileScreen(userData: widget.userData),
                           ),
                         );
-                        _loadAvatar();
+                        await _loadAvatar(); // Refresh avatar after return
                       },
-                      child: CircleAvatar(
-                        radius: 25,
-                        backgroundImage: _avatarImage != null
-                            ? FileImage(_avatarImage!)
-                            : const AssetImage('assets/user_profile.png')
-                                  as ImageProvider,
-                      ),
+                      child: _isLoadingAvatar
+                          ? const CircleAvatar(
+                              radius: 25,
+                              backgroundColor: Colors.white,
+                              child: CircularProgressIndicator(),
+                            )
+                          : CircleAvatar(
+                              radius: 25,
+                              backgroundImage: _getAvatarImageProvider(),
+                              child:
+                                  _avatarUrl == null &&
+                                      (widget.userData?['avatar'] == null ||
+                                          widget.userData!['avatar'].isEmpty)
+                                  ? const Icon(
+                                      Icons.person,
+                                      color: Colors.white,
+                                    )
+                                  : null,
+                            ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -121,10 +163,10 @@ class _DashboardState extends State<Dashboard> {
                         ),
                       ],
                     ),
-                    const Spacer(),
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Row(
@@ -171,7 +213,6 @@ class _DashboardState extends State<Dashboard> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-
                   child: _TomTomWebMap(
                     apiKey: 'MP7TrwgffBilV5TD6SmqTAGZIiK0Firj',
                   ),
@@ -392,6 +433,3 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
     return WebViewWidget(controller: _controller);
   }
 }
-
-
-//kahit ano thankyou
