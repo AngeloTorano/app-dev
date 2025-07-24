@@ -343,16 +343,13 @@ class _TomTomWebMap extends StatefulWidget {
 
 class _TomTomWebMapState extends State<_TomTomWebMap> {
   late final WebViewController _controller;
-  String? _htmlContent;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-
-    final params = const PlatformWebViewControllerCreationParams();
-    _controller = WebViewController.fromPlatformCreationParams(params)
+    _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted);
-
     _loadCityData();
   }
 
@@ -378,30 +375,23 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
           ''';
         }).join();
 
-        _htmlContent =
+        final htmlContent =
             '''
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <title>TomTom Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js"></script>
     <link rel="stylesheet" href="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps.css">
     <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      width: 100%;
-    }
-    #map {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      padding: 10px;
-      width: 100%;
-      height: 100%;
-    }
+      html, body, #map {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+      }
     </style>
 </head>
 <body>
@@ -411,9 +401,10 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
             key: '${widget.apiKey}',
             container: 'map',
             center: [121.0, 14.6],
-            zoom: 4,
-            style: 'https://api.tomtom.com/style/2/custom/style/dG9tdG9tQEBAVzVIak5Sa1psMEl5Y1VjUDu-_JasLpVOe7ObWhVQUtMj/drafts/0.json?key=MP7TrwgffBilV5TD6SmqTAGZIiK0Firj'
+            zoom: 5,
+            style: 'https://api.tomtom.com/style/2/custom/style/dG9tdG9tQEBAVzVIak5Sa1psMEl5Y1VjUDu-_JasLpVOe7ObWhVQUtMj/drafts/0.json?key=${widget.apiKey}'
         });
+
         map.addControl(new tt.FullscreenControl());
         map.addControl(new tt.NavigationControl());
 
@@ -423,13 +414,22 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
 </html>
 ''';
 
-        _controller.loadHtmlString(_htmlContent!);
+        _controller.loadHtmlString(htmlContent);
       }
     }
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return WebViewWidget(controller: _controller);
+    return Stack(
+      children: [
+        WebViewWidget(controller: _controller),
+        if (_isLoading) const Center(child: CircularProgressIndicator()),
+      ],
+    );
   }
 }
