@@ -1,13 +1,21 @@
+// Make sure this import is present:
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:starkey_mobile_app/api_connection/api_connection.dart';
 import 'package:starkey_mobile_app/utils/activity_logger.dart';
-import 'package:starkey_mobile_app/patient_history.dart'; 
+import 'package:starkey_mobile_app/patient_history.dart';
+import 'package:intl/intl.dart';
 
 class QuickViewScreen extends StatefulWidget {
   final int userId;
-  const QuickViewScreen({super.key, required this.userId});
+  final String roleName;
+
+  const QuickViewScreen({
+    super.key,
+    required this.userId,
+    required this.roleName,
+  });
 
   @override
   State<QuickViewScreen> createState() => _QuickViewScreenState();
@@ -58,13 +66,18 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
 
     final url = Uri.parse(ApiConnection.getUser);
 
-    Map<String, String> body = {};
+    final Map<String, String> body = {
+      'UserID': widget.userId.toString(),
+      'Role': widget.roleName,
+    };
+
     if (_searchBy != 'All') {
       final paramKey = paramMap[_searchBy]!;
-      body[paramKey] = _searchController.text;
+      body[paramKey] = _searchController.text.trim();
     }
 
     try {
+      print("🔍 Fetching patients with payload: $body");
       final response = await http.post(url, body: body);
 
       setState(() {
@@ -73,31 +86,16 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print("🔁 Response data: $data");
         if (data['success'] == true && data['patients'] != null) {
           setState(() {
             _patients = List<Map<String, dynamic>>.from(data['patients']);
           });
         } else {
-          setState(() {
-            _patients = [];
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data['message'] ?? 'No patients found')),
-          );
-
-          if (_searchBy != 'All' && _searchController.text.trim().isNotEmpty) {
-            await ActivityLogger.log(
-              userId: widget.userId,
-              actionType: 'SearchPatientFailed',
-              description:
-                  'No patients found for "${_searchController.text.trim()}" by $_searchBy',
-            );
-          }
+          _showNoPatientsMessage(data['message'] ?? 'No patients found');
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error fetching patients')),
-        );
+        _showErrorMessage('Error fetching patients (status ${response.statusCode})');
       }
 
       if (_searchBy != 'All' &&
@@ -106,18 +104,34 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
         await ActivityLogger.log(
           userId: widget.userId,
           actionType: 'SearchPatient',
-          description:
-              'User searched for "${_searchController.text.trim()}" by $_searchBy',
+          description: 'User searched for "${_searchController.text.trim()}" by $_searchBy',
         );
       }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Network error')),
+      _showErrorMessage('Network error');
+    }
+  }
+
+  void _showNoPatientsMessage(String message) {
+    setState(() {
+      _patients = [];
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+
+    if (_searchBy != 'All' && _searchController.text.trim().isNotEmpty) {
+      ActivityLogger.log(
+        userId: widget.userId,
+        actionType: 'SearchPatient',
+        description: 'No patients found for "${_searchController.text.trim()}" by $_searchBy',
       );
     }
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _sortPatients() {
@@ -125,32 +139,23 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
       String sortField;
       switch (_searchBy) {
         case 'SHF Patient ID':
-          sortField = 'SHF Patient ID';
+          sortField = 'shf_id';
           break;
         case 'Surname':
-          sortField = 'Surname';
-          break;
         case 'First Name':
-          sortField = 'FirstName';
+          sortField = 'Name';
           break;
         case 'City/Village':
           sortField = 'City';
           break;
         default:
-          sortField = 'SHF Patient ID';
+          sortField = 'shf_id';
       }
 
       _patients.sort((a, b) {
-        dynamic aValue = a[sortField] ?? '';
-        dynamic bValue = b[sortField] ?? '';
-        int result;
-        if (sortField == 'SHF Patient ID' || sortField == 'Age') {
-          int aInt = int.tryParse(aValue.toString()) ?? 0;
-          int bInt = int.tryParse(bValue.toString()) ?? 0;
-          result = aInt.compareTo(bInt);
-        } else {
-          result = aValue.toString().compareTo(bValue.toString());
-        }
+        final aValue = a[sortField] ?? '';
+        final bValue = b[sortField] ?? '';
+        final result = aValue.toString().compareTo(bValue.toString());
         return _ascending ? result : -result;
       });
     });
@@ -170,10 +175,10 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildPatientRow('SHF Patient ID:', patient['SHF Patient ID']),
+            _buildPatientRow('SHF ID:', patient['shf_id']),
             _buildPatientRow('Name:', patient['Name']),
             _buildPatientRow('Age:', patient['Age']),
-            _buildPatientRow('Birthdate:', patient['Birthdate']),
+            _buildPatientRow('Birthdate:', _formatDate(patient['Birthdate'])),
             _buildPatientRow('Gender:', patient['Gender']),
             _buildPatientRow('City:', patient['City']),
             _buildPatientRow('Mobile:', patient['Mobile']),
@@ -186,8 +191,7 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                 ),
                 onPressed: () {
                   Navigator.push(
@@ -195,9 +199,7 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
                     MaterialPageRoute(
                       builder: (context) => PatientHistoryScreen(
                         userId: widget.userId,
-                        patientId: int.tryParse(
-                                patient['SHF Patient ID'].toString()) ??
-                            0,
+                        patientId: int.tryParse(patient['SHF Patient ID'].toString()) ?? 0,
                       ),
                     ),
                   );
@@ -212,6 +214,16 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
         ),
       ),
     );
+  }
+
+  String _formatDate(dynamic rawDate) {
+    if (rawDate == null || rawDate.toString().isEmpty) return '';
+    try {
+      final date = DateTime.parse(rawDate);
+      return DateFormat('MMMM d, y').format(date);
+    } catch (_) {
+      return rawDate.toString();
+    }
   }
 
   Widget _buildPatientRow(String label, dynamic value) {
@@ -250,10 +262,7 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Patient Quick View',
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text('Patient Quick View', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color.fromRGBO(20, 104, 132, 1),
         actions: [
           IconButton(
@@ -282,10 +291,7 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
                   dropdownColor: const Color.fromRGBO(20, 104, 132, 1),
                   style: const TextStyle(color: Colors.white),
                   items: _searchOptions
-                      .map((option) => DropdownMenuItem(
-                            value: option,
-                            child: Text(option),
-                          ))
+                      .map((option) => DropdownMenuItem(value: option, child: Text(option)))
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
@@ -318,10 +324,7 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
                     onPressed: () {
                       if (_searchBy == 'All') {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content:
-                                Text('Please change "Search by" to search.'),
-                          ),
+                          const SnackBar(content: Text('Please change "Search by" to search.')),
                         );
                       } else {
                         _searchPatients();
@@ -334,9 +337,7 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
                   ),
                 ),
                 onFieldSubmitted: (_) {
-                  if (_searchBy != 'All') {
-                    _searchPatients();
-                  }
+                  if (_searchBy != 'All') _searchPatients();
                 },
               ),
             ),
@@ -344,10 +345,7 @@ class _QuickViewScreenState extends State<QuickViewScreen> {
             if (_isLoading)
               const CircularProgressIndicator(color: Colors.white)
             else if (_patients.isEmpty && _hasSearched)
-              const Text(
-                'No patients found.',
-                style: TextStyle(color: Colors.white),
-              )
+              const Text('No patients found.', style: TextStyle(color: Colors.white))
             else
               Expanded(
                 child: ListView(

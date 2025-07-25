@@ -21,9 +21,50 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   bool _obscureNew = true;
   bool _obscureConfirm = true;
 
+  late int userId;
+  late String username;
+
   final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
+
+  // Store new password input for live validation feedback
+  String _newPasswordInput = '';
+
+  // Password validation rules
+  final List<Map<String, dynamic>> passwordRules = [
+    {
+      'label': 'Minimum 8 characters',
+      'check': (String value) => value.length >= 8,
+    },
+    {
+      'label': 'At least 1 uppercase letter',
+      'check': (String value) => RegExp(r'[A-Z]').hasMatch(value),
+    },
+    {
+      'label': 'At least 1 lowercase letter',
+      'check': (String value) => RegExp(r'[a-z]').hasMatch(value),
+    },
+    {
+      'label': 'At least 1 number',
+      'check': (String value) => RegExp(r'\d').hasMatch(value),
+    },
+    {
+      'label': 'At least 1 special character',
+      'check': (String value) => RegExp(r'[!@#\$%^&*(),.?":{}|<>_\-]').hasMatch(value),
+    },
+    {
+      'label': 'No spaces allowed',
+      'check': (String value) => !value.contains(' '),
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    userId = widget.userData['UserID'];
+    username = widget.userData['Username'] ?? '';
+  }
 
   @override
   void dispose() {
@@ -37,7 +78,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final response = await http.post(
       Uri.parse(ApiConnection.verifyPassword),
       body: {
-        'username': widget.userData['Username'],
+        'username': username,
         'password': _oldPasswordController.text,
       },
     );
@@ -59,7 +100,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         );
 
         await ActivityLogger.log(
-          userId: widget.userData['UserID'],
+          userId: userId,
           actionType: 'UpdatePassword',
           description: 'Attempted password change with incorrect old password',
           status: 'Failed',
@@ -67,17 +108,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         return;
       }
 
-      final userData = widget.userData;
       final response = await http.post(
         Uri.parse(ApiConnection.updateProfile),
         body: {
-          'username': userData['Username'],
-          'old_username': userData['Username'],
-          'FirstName': userData['FirstName'],
-          'LastName': userData['LastName'],
-          'Gender': userData['Gender'],
-          'Birthdate': userData['Birthdate'],
-          'PhoneNumber': userData['PhoneNumber'],
+          'username': username,
+          'old_username': username,
+          'FirstName': widget.userData['FirstName'],
+          'LastName': widget.userData['LastName'],
+          'Gender': widget.userData['Gender'],
+          'Birthdate': widget.userData['Birthdate'],
+          'PhoneNumber': widget.userData['PhoneNumber'],
           'PasswordHash': _newPasswordController.text,
         },
       );
@@ -87,7 +127,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
       if (response.statusCode == 200 && data['success'] == true) {
         await ActivityLogger.log(
-          userId: widget.userData['UserID'],
+          userId: userId,
           actionType: 'UpdatePassword',
           description: 'Password changed successfully',
         );
@@ -98,7 +138,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         Navigator.pop(context);
       } else {
         await ActivityLogger.log(
-          userId: widget.userData['UserID'],
+          userId: userId,
           actionType: 'UpdatePassword',
           description: 'Server error during password change',
           status: 'Failed',
@@ -115,7 +155,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       );
 
       await ActivityLogger.log(
-        userId: widget.userData['UserID'],
+        userId: userId,
         actionType: 'UpdatePassword',
         description: 'Exception during password change: $e',
         status: 'Failed',
@@ -150,9 +190,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 validator: (value) => value == null || value.isEmpty ? 'Enter your old password' : null,
               ),
               const SizedBox(height: 16),
-              TextFormField(  
+              TextFormField(
                 controller: _newPasswordController,
                 obscureText: _obscureNew,
+                onChanged: (value) {
+                  setState(() {
+                    _newPasswordInput = value;
+                  });
+                },
                 decoration: InputDecoration(
                   labelText: 'New Password',
                   border: const OutlineInputBorder(),
@@ -161,8 +206,41 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     onPressed: () => setState(() => _obscureNew = !_obscureNew),
                   ),
                 ),
-                validator: (value) => value == null || value.isEmpty ? 'Enter your new password' : null,
+                validator: (value) {
+                  final unmet = passwordRules.where((rule) => !(rule['check'](value ?? '') as bool)).toList();
+                  if (value == null || value.isEmpty) {
+                    return 'Enter your new password';
+                  }
+                  if (unmet.isNotEmpty) {
+                    return 'Password does not meet all requirements';
+                  }
+                  return null;
+                },
               ),
+
+              // Password rules feedback UI:
+              const SizedBox(height: 8),
+              ...passwordRules.map((rule) {
+                bool isMet = rule['check'](_newPasswordInput);
+                return Row(
+                  children: [
+                    Icon(
+                      isMet ? Icons.check_circle : Icons.cancel,
+                      color: isMet ? Colors.green : Colors.red,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      rule['label'],
+                      style: TextStyle(
+                        color: isMet ? Colors.green : Colors.red,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+
               const SizedBox(height: 16),
               TextFormField(
                 controller: _confirmPasswordController,
@@ -187,11 +265,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color.fromRGBO(20, 104, 132, 1),
                     foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   ),
                   onPressed: _isLoading
                       ? null
                       : () {
                           if (_formKey.currentState!.validate()) {
+                            if (_oldPasswordController.text == _newPasswordController.text) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('New password cannot be the same as old password')),
+                              );
+                              return;
+                            }
                             _changePassword();
                           }
                         },

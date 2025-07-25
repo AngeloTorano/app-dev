@@ -197,81 +197,137 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showTermsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Terms and Conditions'),
-        content: SizedBox(
-          height: 350,
-          width: 300,
-          child: SingleChildScrollView(
-            child: const Text(
-              '''DATA PRIVACY AND MEDICAL RECORDS DISCLOSURE IN THE PHILIPPINES
-Compliance with RA 10173 – The Data Privacy Act of 2012
-
-🔐 YOUR OBLIGATION: KEEP PATIENT RECORDS CONFIDENTIAL
-Medical records are classified as Sensitive Personal Information. Unauthorized access, use, or disclosure can lead to fines, imprisonment, and civil damages.
-
-🧾 COVERED BY LAW:
-• 1987 Constitution – Right to Privacy
-• Data Privacy Act of 2012 (RA 10173)
-• IRR of the DPA & NPC Circulars
-• DOH Administrative Orders & PMA Code of Ethics
-
-✅ DISCLOSURE IS ONLY LEGAL WHEN:
-📃 With Informed, Written Consent
-- Clearly states purpose, scope, and who receives the info
-- Can be revoked at any time
-
-⚖️ With a Valid Court Order or Subpoena
-- Must verify authenticity before complying
-
-🚑 In Emergencies
-- Life-threatening situations requiring immediate care
-
-🧪 For Public Health or Research
-- Must be authorized, anonymized, or with consent
-
-👩‍⚕️ HEALTHCARE PROVIDERS MUST:
-• Appoint a Data Protection Officer (DPO)
-• Maintain organizational, physical, and technical safeguards
-• Execute Data Processing Agreements with third parties (e.g., HMOs, billing services)
-• Report data breaches to the NPC within the required timeframe
-
-🧍‍♂️ PATIENT RIGHTS UNDER THE LAW:
-🧠 Right to Be Informed
-📂 Right to Access Records
-✏️ Right to Correct Errors
-❌ Right to Erasure or Blocking
-🛑 Right to Object to Processing
-💸 Right to Claim Damages
-
-🚨 PENALTIES FOR VIOLATIONS:
-📄 Administrative Fines
-⚖️ Civil Damages
-🚔 Criminal Liability (Fines + Imprisonment)
-
-✅ BEST PRACTICES CHECKLIST:
-✔️ Always obtain and record written consent
-✔️ Limit data access based on role/responsibility
-✔️ Regularly train staff and conduct audits
-✔️ Prepare a data breach response plan
-✔️ Keep disclosure logs (date, purpose, recipient, scope)
-''',
-              style: TextStyle(fontSize: 13),
+ void _showTermsDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Center(
+        child: Text(
+          'Terms and Conditions for Use of the Starkey Connect Mobile Application',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15,),
+          textAlign: TextAlign.center,
+        ),
+      ),
+      content: SizedBox(
+        height: 400,
+        width: 300,
+        child: SingleChildScrollView(
+          child: Text.rich(
+            TextSpan(
+              style: const TextStyle(fontSize: 13, height: 1.5),
+              children: [
+                TextSpan(
+                  text: 'IMPORTANT NOTICE TO EMPLOYEES\n\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      'As an employee of Starkey Hearing Foundation, Philippines, you are granted access to the Starkey Connect mobile application (“the App”) solely for the purpose of supporting healthcare-related functions in line with your assigned role. Your use of the App is subject to the following terms and conditions, grounded in the ',
+                ),
+                TextSpan(
+                  text: 'Data Privacy Act of 2012 (DPA)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      ' and relevant Department of Health (DOH) guidelines. By using this App, you acknowledge and agree to comply with the following:\n\n',
+                ),
+                // Sections
+                TextSpan(
+                  text: '1. Lawful and Ethical Use\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Use the App lawfully, fairly, and ethically.\n'),
+                TextSpan(text: '• Access data only on a '),
+                TextSpan(
+                  text: '“need-to-know” basis.\n\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text: '2. Data Privacy and Confidentiality\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Keep all patient information strictly confidential.\n'),
+                TextSpan(text: '• Do not share data via unsecured platforms.\n\n'),
+                TextSpan(
+                  text: '3. Consent and Transparency\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Obtain consent before processing data.\n'),
+                TextSpan(text: '• Inform patients how data will be used.\n\n'),
+                TextSpan(
+                  text: '4. Data Minimization\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Collect and process only necessary data.\n\n'),
+                TextSpan(
+                  text: '5. Access Control\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Access is based on roles and responsibilities.\n'),
+                TextSpan(text: '• Do not share login credentials.\n\n'),
+                TextSpan(
+                  text: '6. Security Measures\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Use passwords and encrypted channels.\n'),
+                TextSpan(text: '• Report lost or compromised devices.\n\n'),
+                TextSpan(
+                  text: '7. Physical and Digital Security\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Do not store or export patient data improperly.\n'),
+                TextSpan(text: '• Properly dispose of printed records.\n\n'),
+                TextSpan(
+                  text: '8. Reporting of Data Breaches\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Report breaches to the DPO immediately.\n'),
+                TextSpan(text: '• Failure to report may result in legal action.\n\n'),
+                TextSpan(
+                  text: '9. Patient Rights\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Respect patients’ rights to access, correct, or object to their data usage.\n\n'),
+                TextSpan(
+                  text: '10. Training and Compliance\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Stay updated through organizational training.\n\n'),
+                TextSpan(
+                  text: '11. Disciplinary and Legal Consequences\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text: '• Unauthorized use may lead to suspension, termination, or legal consequences under the DPA.\n\n',
+                ),
+                TextSpan(
+                  text: 'Acknowledgement\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: 'By proceeding, you acknowledge that:\n'),
+                TextSpan(text: '• You have read and understood these Terms.\n'),
+                TextSpan(text: '• You agree to comply fully with them.\n'),
+                TextSpan(text: '• You accept your responsibilities under the DPA and Foundation policies.\n\n'),
+                TextSpan(
+                  text: 'If you do not agree, please exit the app and inform your supervisor immediately.',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
+            textAlign: TextAlign.justify,
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Continue'),
-          ),
-        ],
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Continue'),
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -295,7 +351,7 @@ Medical records are classified as Sensitive Personal Information. Unauthorized a
               ),
             ),
             Container(
-              height: MediaQuery.of(context).size.height * .72,
+              height: MediaQuery.of(context).size.height * .49,
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,

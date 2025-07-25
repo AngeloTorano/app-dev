@@ -175,6 +175,7 @@ class _DashboardState extends State<Dashboard> {
                         MaterialPageRoute(
                           builder: (context) => QuickViewScreen(
                             userId: widget.userData?['UserID'] ?? 0,
+                            roleName: widget.userData?['RoleName'] ?? '',
                           ),
                         ),
                       );
@@ -193,6 +194,7 @@ class _DashboardState extends State<Dashboard> {
                         MaterialPageRoute(
                           builder: (context) => ActivityLogScreen(
                             userId: widget.userData?['UserID'] ?? 0,
+                            role: widget.userData?['RoleName'] ?? '',
                           ),
                         ),
                       );
