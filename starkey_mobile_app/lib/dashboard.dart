@@ -349,6 +349,10 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
   late final WebViewController _controller;
   bool _isLoading = true;
 
+  final double defaultLat = 12.509089;
+  final double defaultLon = 122.937894;
+  final double defaultZoom = 3.5;
+
   @override
   void initState() {
     super.initState();
@@ -362,13 +366,10 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageFinished: (String url) {
-            // Set up fullscreen change listeners
             _controller.runJavaScript('''
-              // Initialize scroll behavior
               document.body.style.overflow = 'hidden';
               document.getElementById('map').style.overflow = 'hidden';
               
-              // Set up fullscreen change listener
               document.addEventListener('fullscreenchange', function() {
                 if (document.fullscreenElement) {
                   document.body.style.overflow = 'auto';
@@ -378,8 +379,7 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
                   document.getElementById('map').style.overflow = 'hidden';
                 }
               });
-              
-              // Reload map when page is shown
+
               document.addEventListener('visibilitychange', function() {
                 if (!document.hidden) {
                   map.resize();
@@ -401,7 +401,6 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
 
     try {
       final response = await http.get(Uri.parse(ApiConnection.mapCities));
-
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         if (jsonData['success']) {
@@ -506,47 +505,47 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
 <body>
     <div id="map"></div>
     <script>
-        // Initialize map
+        const defaultCenter = [122.937894, 12.509089];
+        const defaultZoom = 3.5;
+
         const map = tt.map({
             key: '${widget.apiKey}',
             container: 'map',
-            center: [122.937894, 12.509089],
-            zoom: 3.5,
+            center: defaultCenter,
+            zoom: defaultZoom,
             style: 'https://api.tomtom.com/style/2/custom/style/dG9tdG9tQEBAVzVIak5Sa1psMEl5Y1VjUDu-_JasLpVOe7ObWhVQUtMj/drafts/0.json?key=${widget.apiKey}'
         });
 
-        // Add controls
         map.addControl(new tt.FullscreenControl());
 
-        // Add markers
         $markersJS
-        
-        // Handle fullscreen changes
+
         function handleFullscreenChange() {
           if (!document.fullscreenElement) {
             map.dragPan.disable();
             map.touchZoomRotate.disable();
             map.doubleClickZoom.disable();
             map.scrollZoom.disable();
+
+            // Reset center and zoom when exiting fullscreen
+            map.setCenter(defaultCenter);
+            map.setZoom(defaultZoom);
           } else {
             map.dragPan.enable();
-            map.touchZoomRotate.enable();
             map.doubleClickZoom.enable();
             map.scrollZoom.enable();
           }
         }
-        
+
         document.addEventListener('fullscreenchange', handleFullscreenChange);
-        handleFullscreenChange(); // Initialize
-        
-        // Reload map when page becomes visible
+        handleFullscreenChange();
+
         document.addEventListener('visibilitychange', function() {
           if (!document.hidden) {
             map.resize();
           }
         });
-        
-        // Handle page reload
+
         window.addEventListener('pageshow', function() {
           map.resize();
         });
@@ -559,7 +558,6 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Reload data when screen becomes active again
     _loadCityData();
   }
 
