@@ -3,14 +3,15 @@ import 'quickView.dart';
 import 'sms.dart';
 import 'logs.dart';
 import 'user_profile_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'api_connection/api_connection.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter/gestures.dart';
+
 
 class Dashboard extends StatefulWidget {
   final Map<String, dynamic>? userData;
@@ -23,12 +24,154 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   String? _avatarUrl;
   bool _isLoadingAvatar = false;
+  late TapGestureRecognizer _termsRecognizer;
 
   @override
   void initState() {
     super.initState();
+    _termsRecognizer = TapGestureRecognizer()..onTap = _showTermsDialog;
     _loadAvatar();
   }
+
+  @override
+  void dispose() {
+    _termsRecognizer.dispose();
+    super.dispose();
+  }
+
+void _showTermsDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Center(
+        child: Text(
+          'Terms and Conditions for Use of the Starkey Connect Mobile Application',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15,),
+          textAlign: TextAlign.center,
+        ),
+      ),
+      content: SizedBox(
+        height: 400,
+        width: 300,
+        child: SingleChildScrollView(
+          child: Text.rich(
+            TextSpan(
+              style: const TextStyle(fontSize: 13, height: 1.5),
+              children: [
+                TextSpan(
+                  text: 'IMPORTANT NOTICE TO EMPLOYEES\n\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      'As an employee of Starkey Hearing Foundation, Philippines, you are granted access to the Starkey Connect mobile application (“the App”) solely for the purpose of supporting healthcare-related functions in line with your assigned role. Your use of the App is subject to the following terms and conditions, grounded in the ',
+                ),
+                TextSpan(
+                  text: 'Data Privacy Act of 2012 (DPA)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text:
+                      ' and relevant Department of Health (DOH) guidelines. By using this App, you acknowledge and agree to comply with the following:\n\n',
+                ),
+                // Sections
+                TextSpan(
+                  text: '1. Lawful and Ethical Use\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Use the App lawfully, fairly, and ethically.\n'),
+                TextSpan(text: '• Access data only on a '),
+                TextSpan(
+                  text: '“need-to-know” basis.\n\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text: '2. Data Privacy and Confidentiality\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Keep all patient information strictly confidential.\n'),
+                TextSpan(text: '• Do not share data via unsecured platforms.\n\n'),
+                TextSpan(
+                  text: '3. Consent and Transparency\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Obtain consent before processing data.\n'),
+                TextSpan(text: '• Inform patients how data will be used.\n\n'),
+                TextSpan(
+                  text: '4. Data Minimization\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Collect and process only necessary data.\n\n'),
+                TextSpan(
+                  text: '5. Access Control\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Access is based on roles and responsibilities.\n'),
+                TextSpan(text: '• Do not share login credentials.\n\n'),
+                TextSpan(
+                  text: '6. Security Measures\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Use passwords and encrypted channels.\n'),
+                TextSpan(text: '• Report lost or compromised devices.\n\n'),
+                TextSpan(
+                  text: '7. Physical and Digital Security\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Do not store or export patient data improperly.\n'),
+                TextSpan(text: '• Properly dispose of printed records.\n\n'),
+                TextSpan(
+                  text: '8. Reporting of Data Breaches\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Report breaches to the DPO immediately.\n'),
+                TextSpan(text: '• Failure to report may result in legal action.\n\n'),
+                TextSpan(
+                  text: '9. Patient Rights\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Respect patients’ rights to access, correct, or object to their data usage.\n\n'),
+                TextSpan(
+                  text: '10. Training and Compliance\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: '• Stay updated through organizational training.\n\n'),
+                TextSpan(
+                  text: '11. Disciplinary and Legal Consequences\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text: '• Unauthorized use may lead to suspension, termination, or legal consequences under the DPA.\n\n',
+                ),
+                TextSpan(
+                  text: 'Acknowledgement\n',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: 'By proceeding, you acknowledge that:\n'),
+                TextSpan(text: '• You have read and understood these Terms.\n'),
+                TextSpan(text: '• You agree to comply fully with them.\n'),
+                TextSpan(text: '• You accept your responsibilities under the DPA and Foundation policies.\n\n'),
+                TextSpan(
+                  text: 'If you do not agree, please exit the app and inform your supervisor immediately.',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.justify,
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Back'),
+        ),
+      ],
+    ),
+  );
+}
+
+
 
   Future<void> _loadAvatar() async {
     final userData = widget.userData;
@@ -94,13 +237,26 @@ class _DashboardState extends State<Dashboard> {
   @override
   Widget build(BuildContext context) {
     final name =
-        '${widget.userData?['FirstName'] ?? ''} ${widget.userData?['LastName'] ?? ''}';
+    '${widget.userData?['FirstName'] ?? ''} ${widget.userData?['LastName'] ?? ''}';
+    final roleName = (widget.userData?['RoleName'] ?? 'Role').toUpperCase();
 
     return Scaffold(
       appBar: AppBar(
-        title: Image.asset('assets/logoLogin.png', height: 40),
-        backgroundColor: const Color.fromRGBO(20, 104, 132, 1),
+      title: Padding(
+        padding: const EdgeInsets.only(top: 10.0), 
+        child: Text(
+          '$roleName DASHBOARD',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 21,
+          ),
+        ),
       ),
+      centerTitle: true,
+      backgroundColor: const Color.fromRGBO(20, 104, 132, 1),
+    ),
+
       body: RefreshIndicator(
         onRefresh: () async {
           await _loadAvatar();
@@ -111,7 +267,7 @@ class _DashboardState extends State<Dashboard> {
             children: [
               Container(
                 color: const Color.fromRGBO(20, 104, 132, 1),
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.fromLTRB(16.0, 3.0, 16.0, 16.0),
                 child: Row(
                   children: [
                     InkWell(
@@ -173,15 +329,16 @@ class _DashboardState extends State<Dashboard> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _buildNavButton(Icons.dashboard, 'Quick View', () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => QuickViewScreen(
-                            userId: widget.userData?['UserID'] ?? 0,
-                          ),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => QuickViewScreen(
+                          userId: widget.userData?['UserID'] ?? 0,
+                          roleName: widget.userData?['RoleName'] ?? '', // ✅ pass role name
                         ),
-                      );
-                    }),
+                      ),
+                    );
+                  }),
                     _buildNavButton(Icons.sms, 'SMS', () {
                       Navigator.push(
                         context,
@@ -191,15 +348,20 @@ class _DashboardState extends State<Dashboard> {
                       );
                     }),
                     _buildNavButton(Icons.history, 'Activity Log', () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ActivityLogScreen(
-                            userId: widget.userData?['UserID'] ?? 0,
-                          ),
+                    print("userData: ${widget.userData}");
+                    print("Navigating to ActivityLogScreen with role: ${widget.userData?['RoleName']}");
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ActivityLogScreen(
+                          userId: widget.userData?['UserID'] ?? 0,
+                          role: widget.userData?['RoleName'] ?? 'User',
                         ),
-                      );
-                    }),
+                      ),
+                    );
+                  }),
+
+
                   ],
                 ),
               ),
@@ -274,6 +436,64 @@ class _DashboardState extends State<Dashboard> {
                   },
                 ),
               ),
+              const SizedBox(height: 14),
+              Padding(
+                padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 1.0, bottom: 20.0),
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 5.0),
+                      child: GestureDetector(
+                        onTap: () => _openExternalUrl(
+                          'https://www.starkeyhearingfoundation.org/starkey-hearing-institute-philippines/',
+                        ),
+                        child: Image.asset('assets/logoLogin.png', height: 50),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(top: 12),
+                      child: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(fontSize: 12, color: Colors.white),
+                          children: [
+                            const TextSpan(text: 'Connect with Us    ●   '),
+                            TextSpan(
+                              text: 'Terms and Conditions',
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()..onTap = _showTermsDialog,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                    padding: const EdgeInsets.only(bottom: 5.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _socialIcon('assets/icons/fb.png', 'https://www.facebook.com/StarkeyHearingFoundation'),
+                        _verticalLine(),
+                        _socialIcon('assets/icons/linkedin.png', 'https://www.linkedin.com/company/starkey-hearing-foundation/'),
+                        _verticalLine(),
+                        _socialIcon('assets/icons/ig.png', 'https://www.instagram.com/starkeyhearingfoundation/'),
+                        _verticalLine(),
+                        _socialIcon('assets/icons/x.png', 'https://twitter.com/starkeyfnd'),
+                        _verticalLine(),
+                        _socialIcon('assets/icons/yt.png', 'https://www.youtube.com/@StarkeyHearingFndn'),
+                      ],
+                    ),
+                  ),
+                    const SizedBox(height: 5),
+                    const Text(
+                      '© 2025 Starkey Connect',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -281,6 +501,35 @@ class _DashboardState extends State<Dashboard> {
       backgroundColor: const Color.fromRGBO(20, 104, 132, 1),
     );
   }
+
+Widget _verticalLine() {
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 8),
+    height: 24, 
+    width: 2,
+    color: Colors.white54, 
+  );
+}
+
+Widget _socialIcon(String assetPath, String url) {
+  return IconButton(
+    icon: Image.asset(assetPath, width: 24, height: 24),
+    onPressed: () => _openExternalUrl(url),
+  );
+}
+
+Future<void> _openExternalUrl(String url) async {
+  final uri = Uri.tryParse(url);
+  if (uri == null) {
+    Fluttertoast.showToast(msg: "Invalid URL.");
+    return;
+  }
+
+  if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    Fluttertoast.showToast(msg: "Could not launch the URL.");
+  }
+}
+
 
   Widget _buildNavButton(IconData icon, String label, VoidCallback onPressed) {
     return Column(

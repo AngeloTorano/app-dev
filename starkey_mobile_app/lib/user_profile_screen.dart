@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-
+import 'package:starkey_mobile_app/change_password_screen.dart';
 import 'main.dart';
 import 'edit_profile_screen.dart';
 import 'utils/activity_logger.dart';
@@ -19,10 +17,8 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  File? _avatarImage;
   String? _avatarUrl;
   bool _isLoadingAvatar = false;
-  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -54,61 +50,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  Future<void> _uploadAvatar(File imageFile) async {
-    final userData = widget.userData;
-    if (userData == null || userData['UserID'] == null) return;
-
-    setState(() => _isLoadingAvatar = true);
-
-    try {
-      final userId = userData['UserID'].toString();
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse(ApiConnection.uploadAvatar),
-      );
-
-      request.fields['action'] = 'upload';
-      request.fields['user_id'] = userId;
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'avatar',
-          imageFile.path,
-          filename: 'avatar_$userId.jpg',
-        ),
-      );
-
-      final response = await request.send();
-      final responseData = await response.stream.bytesToString();
-      final data = json.decode(responseData);
-
-      if (response.statusCode == 200 && data['status'] == 'success') {
-        setState(() => _avatarUrl = data['data']['avatar_url']);
-      }
-    } finally {
-      setState(() => _isLoadingAvatar = false);
-    }
-  }
-
-  Future<void> _pickAndUploadImage() async {
-    final pickedFile = await _picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-    );
-    if (pickedFile != null) {
-      await _uploadAvatar(File(pickedFile.path));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final userData = widget.userData ?? {};
-    final name = "${userData['FirstName'] ?? ''} ${userData['LastName'] ?? ''}"
-        .trim();
+    final name = "${userData['FirstName'] ?? ''} ${userData['LastName'] ?? ''}".trim();
     final position = userData['RoleName'] ?? 'Position';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Profile', style: TextStyle(color: Colors.white)),
+        title: const Text('Profile', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color.fromRGBO(20, 104, 132, 1),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -119,37 +69,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             Center(
               child: Column(
                 children: [
-                  GestureDetector(
-                    onTap: _pickAndUploadImage,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CircleAvatar(
-                          radius: 70,
-                          backgroundImage: _avatarUrl != null
-                              ? NetworkImage(_avatarUrl!)
-                              : const AssetImage('assets/user_profile.png')
-                                    as ImageProvider,
-                        ),
-                        if (_isLoadingAvatar) const CircularProgressIndicator(),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: Colors.blue,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 70,
+                        backgroundImage: _avatarUrl != null
+                            ? NetworkImage(_avatarUrl!)
+                            : const AssetImage('assets/user_profile.png') as ImageProvider,
+                      ),
+                      if (_isLoadingAvatar) const CircularProgressIndicator(),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -166,41 +96,41 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     icon: Icons.person,
                     title: 'My Profile',
                     onTap: () async {
-                      final updatedData =
-                          await Navigator.push<Map<String, dynamic>>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  EditProfileScreen(userData: userData),
-                            ),
-                          );
+                      final updatedData = await Navigator.push<Map<String, dynamic>>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EditProfileScreen(userData: userData),
+                        ),
+                      );
                       if (updatedData != null) {
                         setState(() => userData.addAll(updatedData));
                         _loadAvatar();
                       }
                     },
                   ),
+                  const SizedBox(height: 12), // Add space between tiles
 
                   _buildProfileTile(
-                    icon: Icons.settings,
-                    title: 'Language',
-                    onTap: null,
-                    trailing: DropdownButton<String>(
-                      value: 'English',
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'English',
-                          child: Text('English'),
+                    icon: Icons.lock,
+                    title: 'Change Password',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChangePasswordScreen(userData: userData),
                         ),
-                        DropdownMenuItem(
-                          value: 'Filipino',
-                          child: Text('Filipino'),
-                        ),
-                      ],
-                      onChanged: (value) {},
-                    ),
+                      );
+                    },
                   ),
 
+                  const SizedBox(height: 12),
+                  _buildProfileTile(
+                    icon: Icons.info_outline,
+                    title: 'Usage Agreement',
+                    onTap: () => _showUsageAgreementDialog(context),
+                  ),
+
+                  const SizedBox(height: 12),
                   _buildProfileTile(
                     icon: Icons.logout,
                     title: 'Log Out',
@@ -214,6 +144,113 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
     );
   }
+
+  void _showUsageAgreementDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24), // control outer width
+      contentPadding: const EdgeInsets.only(top: 10, left: 24, right: 24, bottom: 10),
+      titlePadding: const EdgeInsets.only(top: 20),
+      title: Center(
+        child: RichText(
+          textAlign: TextAlign.center,
+          text: const TextSpan(
+            style: TextStyle(color: Colors.black87, fontSize: 15),
+            children: [
+              TextSpan(
+                text: '📜 ',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              TextSpan(
+                text: 'Privacy Policy for Starkey Connect',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      ),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: 380,
+          maxHeight: 460,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: RichText(
+                  text: const TextSpan(
+                    style: TextStyle(color: Colors.black87, fontSize: 12, height: 1.5),
+                    children: [
+                      TextSpan(text: 'Effective Date: July 25, 2025\n\n'),
+                      TextSpan(text: '1. Introduction\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(
+                        text:
+                            'This Privacy Policy applies to all staff users of the Starkey Connect mobile application, including Admins, City Coordinators, and Country Coordinators. The app is designed exclusively for the use of Starkey Hearing Foundation personnel in managing and monitoring patient data and operational tasks.\n\n',
+                      ),
+                      TextSpan(text: '2. Information We Collect\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: 'We collect and store the following data:\n'),
+                      TextSpan(text: '• Personal Information: Name, email, role, assigned cities\n'),
+                      TextSpan(text: '• Login Credentials: Username and encrypted password\n'),
+                      TextSpan(text: '• Activity Logs: Login history, OTP requests, password changes, user actions\n'),
+                      TextSpan(text: '• Device Info: App version, device type, IP address\n\n'),
+                      TextSpan(text: '3. Purpose of Data Collection\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: '• Authenticate users and manage access based on roles\n'),
+                      TextSpan(text: '• Track activities for accountability and security\n'),
+                      TextSpan(text: '• Assign coordinators to specific regions\n'),
+                      TextSpan(text: '• Generate usage and performance reports\n'),
+                      TextSpan(text: '• Prevent unauthorized access or data tampering\n\n'),
+                      TextSpan(text: '4. Data Use and Disclosure\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: 'Your information is only used internally and is not shared externally except when:\n'),
+                      TextSpan(text: '• Required by law or internal audit\n'),
+                      TextSpan(text: '• Necessary to investigate unauthorized activity\n'),
+                      TextSpan(text: '• Required by IT administrators for maintenance\n\n'),
+                      TextSpan(text: '5. Data Security\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: 'We employ:\n'),
+                      TextSpan(text: '• Role-based access control\n'),
+                      TextSpan(text: '• Password hashing and OTP verification\n'),
+                      TextSpan(text: '• Activity logging\n'),
+                      TextSpan(text: '• Encrypted transmission\n'),
+                      TextSpan(text: '• Regular system updates\n\n'),
+                      TextSpan(text: '6. User Responsibilities\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: 'Staff users must:\n'),
+                      TextSpan(text: '• Keep credentials confidential\n'),
+                      TextSpan(text: '• Report suspicious activity\n'),
+                      TextSpan(text: '• Use system only for authorized purposes\n'),
+                      TextSpan(text: '• Never share or misuse patient data\n'),
+                      TextSpan(text: 'Violations may result in access suspension or disciplinary action.\n\n'),
+                      TextSpan(text: '7. Retention and Deletion\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: 'Data is retained while affiliated with the Foundation and longer if required by audit/legal compliance.\n\n'),
+                      TextSpan(text: '8. Policy Updates\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: 'We may update this policy. Continued app use means acceptance of changes.\n\n'),
+                      TextSpan(text: '9. Contact\n', style: TextStyle(fontWeight: FontWeight.bold)),
+                      TextSpan(text: 'IT Administrator – Starkey Hearing Foundation Philippines\n'),
+                      TextSpan(text: '📧 support@starkey.ph\n'),
+                      TextSpan(text: '📞 (123) 456-7890\n'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Align(
+              alignment: Alignment.center,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close', style: TextStyle(fontSize: 12)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+
+
 
   Widget _buildProfileTile({
     required IconData icon,

@@ -5,10 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:starkey_mobile_app/api_connection/api_connection.dart';
-import 'package:starkey_mobile_app/change_password_screen.dart';
 import 'package:starkey_mobile_app/utils/activity_logger.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -128,24 +126,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  Future<String?> _fetchAvatarUrl() async {
-    try {
-      final response = await http.post(
-        Uri.parse(ApiConnection.uploadAvatar),
-        body: {'action': 'get', 'user_id': _userId.toString()},
-      );
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['status'] == 'success') {
-          return data['avatar_url'] ?? data['avatar'];
-        }
-      }
-      return null;
-    } catch (e) {
-      debugPrint('Fetch avatar URL error: $e');
-      return null;
-    }
-  }
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
@@ -466,94 +446,59 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     const SizedBox(height: 24),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromRGBO(
-                              20,
-                              104,
-                              132,
-                              1,
-                            ),
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ChangePasswordScreen(
-                                  userData: {
-                                    'UserID': _userId,
-                                    'Username': _usernameController.text,
-                                    'FirstName': _firstNameController.text,
-                                    'LastName': _lastNameController.text,
-                                    'Gender': _gender,
-                                    'Birthdate': _birthday,
-                                    'PhoneNumber': _phoneController.text,
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                          child: const Text('Change Password'),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: _hasChanges
-                              ? () async {
-                                  if (_formKey.currentState!.validate()) {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Save Changes'),
-                                        content: const Text(
-                                          'Are you sure you want to save changes to your profile?',
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context, false),
-                                            child: const Text('Cancel'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.pop(context, true),
-                                            child: const Text('Yes'),
-                                          ),
-                                        ],
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: _hasChanges
+                          ? () async {
+                              if (_formKey.currentState!.validate()) {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Save Changes'),
+                                    content: const Text(
+                                      'Are you sure you want to save changes to your profile?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text('Yes'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  final updatedUserData =
+                                      await _updateProfile();
+                                  if (!mounted) return;
+                                  if (updatedUserData != null) {
+                                    Navigator.pop(context, updatedUserData);
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Failed to update profile.'),
                                       ),
                                     );
-                                    if (confirm == true) {
-                                      final updatedUserData =
-                                          await _updateProfile();
-                                      if (!mounted) return;
-                                      if (updatedUserData != null) {
-                                        Navigator.pop(context, updatedUserData);
-                                      } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Failed to update profile.',
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
                                   }
                                 }
-                              : null,
-                          child: const Text('Save Changes'),
-                        ),
-                      ],
+                              }
+                            }
+                          : null,
+                      child: const Text('Save Changes'),
                     ),
                   ],
+                ),
+                ],
                 ),
               ),
             ),

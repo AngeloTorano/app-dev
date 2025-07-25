@@ -44,7 +44,8 @@ class _SmsScreenState extends State<SmsScreen> {
             _messages.addAll(data.map((e) {
               final DateTime sentDate = DateTime.tryParse(e['sent_at'] ?? '') ?? DateTime.now();
               return {
-                'patientName': e['patient_name'] ?? 'Unknown',
+                'rowNumber': e['row_number'] ?? 0,
+                'patientName': (e['patient_name'] ?? '').toString().trim().isNotEmpty ? e['patient_name']: 'Unknown',
                 'city': e['city'] ?? 'Unknown',
                 'recipientNumber': e['recipient_number'] ?? '',
                 'message': e['message'] ?? '',
@@ -229,14 +230,14 @@ class _SmsScreenState extends State<SmsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${msg['patientName']} (${msg['recipientNumber']})',
+                    '#${msg['rowNumber']} • ${msg['patientName']} (${msg['recipientNumber']})',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: isSent ? Colors.white : Colors.tealAccent,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text('City: ${msg['city']}', style: const TextStyle(color: Colors.white70)),
+                    Text('City: ${msg['city'].toString().isEmpty ? 'Unknown' : msg['city']}', style: const TextStyle(color: Colors.white70)),
                     const SizedBox(height: 4),
                     Text(msg['message'], style: const TextStyle(color: Colors.white)),
                     const SizedBox(height: 8),

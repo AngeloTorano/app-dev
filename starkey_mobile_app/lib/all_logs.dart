@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'api_connection/api_connection.dart';
-import 'all_logs.dart';
+import '../api_connection/api_connection.dart'; // adjust if needed
 
+// Utility functions
 IconData getIcon(String? actionType, [String? status]) {
   final type = actionType?.toLowerCase() ?? '';
   final stat = status?.toLowerCase() ?? '';
@@ -25,14 +25,13 @@ IconData getIcon(String? actionType, [String? status]) {
     case 'updateavatar':
       return Icons.camera_alt;
     case 'verifyotp':
-      return Icons.verified_user; // ✅ Added
+      return Icons.verified_user;
     case 'resetpassword':
-      return Icons.password; // ✅ Added
+      return Icons.password;
     default:
       return Icons.info_outline;
   }
 }
-
 
 Color getColor(String? actionType, [String? status]) {
   final type = actionType?.toLowerCase() ?? '';
@@ -54,44 +53,35 @@ Color getColor(String? actionType, [String? status]) {
     case 'updateavatar':
       return Colors.teal;
     case 'verifyotp':
-      return stat == 'failed' ? Colors.redAccent : Colors.indigo; // ✅ Added
+      return stat == 'failed' ? Colors.redAccent : Colors.indigo;
     case 'resetpassword':
-      return stat == 'failed' ? Colors.grey : Colors.deepPurple; // ✅ Added
+      return stat == 'failed' ? Colors.grey : Colors.deepPurple;
     default:
       return Colors.grey;
   }
 }
 
-
-class ActivityLogScreen extends StatefulWidget {
-  final int userId;
-  final String role;
-
-  const ActivityLogScreen({
-    super.key,
-    required this.userId,
-    required this.role,
-  });
+class AllLogsScreen extends StatefulWidget {
+  const AllLogsScreen({super.key});
 
   @override
-  State<ActivityLogScreen> createState() => _ActivityLogScreenState();
+  State<AllLogsScreen> createState() => _AllLogsScreenState();
 }
 
-class _ActivityLogScreenState extends State<ActivityLogScreen> {
+class _AllLogsScreenState extends State<AllLogsScreen> {
   List<dynamic> logs = [];
   List<dynamic> filteredLogs = [];
   bool isLoading = true;
   String searchQuery = '';
   String selectedActionType = 'All';
   String sortBy = 'Newest';
+  String selectedName = 'All';
 
   @override
   void initState() {
     super.initState();
-    print("Received role: ${widget.role}");
     fetchLogs();
   }
-
 
   Future<void> fetchLogs() async {
     try {
@@ -99,16 +89,11 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true && data['logs'] != null) {
-          final userLogs = (data['logs'] as List).where((log) {
-            final logUserID = log['UserID'];
-            return logUserID == null || logUserID.toString() == widget.userId.toString();
-          }).toList();
-
           setState(() {
-            logs = userLogs;
-            filteredLogs = userLogs;
-            isLoading = false;
-          });
+          logs = data['logs'];
+          filteredLogs = data['logs'];
+          isLoading = false;
+        });
         } else {
           setState(() {
             logs = [];
@@ -119,7 +104,7 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
       } else {
         throw Exception('Failed to load logs: ${response.statusCode}');
       }
-    } catch (e) {
+    } catch (_) {
       setState(() {
         logs = [];
         filteredLogs = [];
@@ -129,20 +114,28 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   }
 
   void applyFilters() {
-    setState(() {
-      filteredLogs = logs.where((log) {
-        final action = log['ActionType']?.toString().toLowerCase() ?? '';
-        final desc = log['Description']?.toString().toLowerCase() ?? '';
-        final status = log['Status']?.toString().toLowerCase() ?? '';
-        final matchesSearch = action.contains(searchQuery.toLowerCase()) ||
-            desc.contains(searchQuery.toLowerCase()) ||
-            status.contains(searchQuery.toLowerCase());
-        final matchesDropdown = selectedActionType == 'All' || log['ActionType'] == selectedActionType;
-        return matchesSearch && matchesDropdown;
-      }).toList();
-      sortLogs();
-    });
-  }
+  setState(() {
+    filteredLogs = logs.where((log) {
+      final fullName = log['FullName']?.toString().toLowerCase() ?? '';
+      final action = log['ActionType']?.toString().toLowerCase() ?? '';
+      final desc = log['Description']?.toString().toLowerCase() ?? '';
+      final status = log['Status']?.toString().toLowerCase() ?? '';
+
+      final matchesSearch = fullName.contains(searchQuery.toLowerCase()) ||
+          action.contains(searchQuery.toLowerCase()) ||
+          desc.contains(searchQuery.toLowerCase()) ||
+          status.contains(searchQuery.toLowerCase());
+
+      final matchesAction = selectedActionType == 'All' || log['ActionType'] == selectedActionType;
+      final matchesName = selectedName == 'All' || log['FullName'] == selectedName;
+
+      return matchesSearch && matchesAction && matchesName;
+    }).toList();
+
+    sortLogs();
+  });
+}
+
 
   void filterLogs(String query) {
     searchQuery = query;
@@ -171,35 +164,91 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   }
 
   void showFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.blueGrey[900],
-        title: const Text("Filter by Action Type", style: TextStyle(color: Colors.white)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView(
-            shrinkWrap: true,
+  final uniqueActionTypes = ['All', ...{
+    for (var log in logs)
+      if ((log['ActionType'] ?? '').toString().trim().isNotEmpty)
+        (log['ActionType'] ?? '').toString().trim()
+  }];
+
+  final uniqueNames = ['All', ...{
+    for (var log in logs)
+      if ((log['FullName'] ?? '').toString().trim().isNotEmpty)
+        (log['FullName'] ?? '').toString().trim()
+  }];
+
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: Colors.blueGrey[900],
+      title: const Text("Filter Options", style: TextStyle(color: Colors.white)),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              ...['All', ...logs.map((log) => log['ActionType'] ?? '').where((type) => type != '').toSet()].map(
-                (type) => ListTile(
-                  title: Text(type, style: const TextStyle(color: Colors.white)),
-                  tileColor: selectedActionType == type ? Colors.teal : null,
-                  onTap: () {
-                    setState(() {
-                      selectedActionType = type;
-                      applyFilters();
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8.0),
+                child: Text("By Action Type", style: TextStyle(color: Colors.white, fontSize: 14)),
               ),
+              ...uniqueActionTypes.map((type) => GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedActionType = type;
+                        applyFilters();
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                      margin: const EdgeInsets.symmetric(vertical: 2),
+                      decoration: BoxDecoration(
+                        color: selectedActionType == type ? Colors.teal.withOpacity(0.5) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        type,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ),
+                  )),
+              const SizedBox(height: 16),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8.0),
+                child: Text("By Name", style: TextStyle(color: Colors.white, fontSize: 14)),
+              ),
+              ...uniqueNames.map((name) => GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        selectedName = name;
+                        applyFilters();
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                      margin: const EdgeInsets.symmetric(vertical: 2),
+                      decoration: BoxDecoration(
+                        color: selectedName == name ? Colors.teal.withOpacity(0.5) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        name,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ),
+                  )),
             ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   void showSortDialog() {
     showDialog(
@@ -236,32 +285,22 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-  title: const Text('Activity Log', style: TextStyle(color: Colors.white)),
-  backgroundColor: const Color.fromRGBO(20, 104, 132, 1),
-  actions: [
-  if (widget.role.trim().toLowerCase() == 'admin') // <-- ✅ updated
-    IconButton(
-      icon: const Icon(Icons.supervisor_account_outlined, color: Colors.white),
-      tooltip: 'View All Activity Logs',
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const AllLogsScreen(),
-          ),
-        );
-      },
-    )
-  else
-    IconButton(
-      icon: const Icon(Icons.refresh, color: Colors.white),
-      tooltip: 'Refresh Logs',
-      onPressed: () {
-        fetchLogs(); // Refresh page for non-admins
-      },
-    ),
-],
-),
+        title: const Text('All Users Activity Logs', style: TextStyle(color: Colors.white)),
+        backgroundColor: const Color.fromRGBO(20, 104, 132, 1),
+        actions: [
+          IconButton(
+          icon: const Icon(Icons.refresh, color: Colors.white),
+          onPressed: () {
+            setState(() {
+              selectedActionType = 'All';
+              selectedName = 'All';
+              searchQuery = '';
+            });
+            fetchLogs();
+          },
+        ),
+        ],
+      ),
       backgroundColor: const Color.fromRGBO(20, 104, 132, 1),
       body: Column(
         children: [
@@ -337,8 +376,12 @@ class _ActivityLogScreenState extends State<ActivityLogScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          log['ActionType'] ?? 'N/A',
+                                          log['FullName'] ?? 'System',
                                           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                        ),
+                                        Text(
+                                          log['ActionType'] ?? 'N/A',
+                                          style: const TextStyle(color: Colors.white),
                                         ),
                                         Text(
                                           log['Description'] ?? 'No description',
