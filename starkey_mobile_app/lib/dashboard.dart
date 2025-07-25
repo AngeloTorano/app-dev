@@ -3,14 +3,11 @@ import 'quickView.dart';
 import 'sms.dart';
 import 'logs.dart';
 import 'user_profile_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'api_connection/api_connection.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:path_provider/path_provider.dart';
 
 class Dashboard extends StatefulWidget {
   final Map<String, dynamic>? userData;
@@ -123,7 +120,7 @@ class _DashboardState extends State<Dashboard> {
                                 UserProfileScreen(userData: widget.userData),
                           ),
                         );
-                        await _loadAvatar(); // Refresh avatar after return
+                        await _loadAvatar();
                       },
                       child: _isLoadingAvatar
                           ? const CircleAvatar(
@@ -203,7 +200,7 @@ class _DashboardState extends State<Dashboard> {
                   ],
                 ),
               ),
-              // ========== TOMTOM WEBVIEW MAP ==========
+              // ========== TOMTOM WEBVIEW MAP ========== //
               Container(
                 height: 240,
                 margin: const EdgeInsets.all(16.0),
@@ -211,14 +208,19 @@ class _DashboardState extends State<Dashboard> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.white),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: _TomTomWebMap(
-                    apiKey: 'MP7TrwgffBilV5TD6SmqTAGZIiK0Firj',
+                child: Listener(
+                  onPointerDown: (_) {},
+                  onPointerMove: (_) {},
+                  onPointerUp: (_) {},
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: _TomTomWebMap(
+                      apiKey: 'MP7TrwgffBilV5TD6SmqTAGZIiK0Firj',
+                    ),
                   ),
                 ),
               ),
-              // ========== END MAP ==========
+              // ========== END MAP ========== //
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: FutureBuilder<Map<String, int>>(
@@ -348,35 +350,103 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
   @override
   void initState() {
     super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted);
+    _initializeWebViewController();
     _loadCityData();
   }
 
+  void _initializeWebViewController() {
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (String url) {
+            // Set up fullscreen change listeners
+            _controller.runJavaScript('''
+              // Initialize scroll behavior
+              document.body.style.overflow = 'hidden';
+              document.getElementById('map').style.overflow = 'hidden';
+              
+              // Set up fullscreen change listener
+              document.addEventListener('fullscreenchange', function() {
+                if (document.fullscreenElement) {
+                  document.body.style.overflow = 'auto';
+                  document.getElementById('map').style.overflow = 'auto';
+                } else {
+                  document.body.style.overflow = 'hidden';
+                  document.getElementById('map').style.overflow = 'hidden';
+                }
+              });
+              
+              // Reload map when page is shown
+              document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                  map.resize();
+                }
+              });
+            ''');
+            setState(() {
+              _isLoading = false;
+            });
+          },
+        ),
+      );
+  }
+
   Future<void> _loadCityData() async {
-    final response = await http.get(Uri.parse(ApiConnection.mapCities));
+    setState(() {
+      _isLoading = true;
+    });
 
-    if (response.statusCode == 200) {
-      final jsonData = jsonDecode(response.body);
-      if (jsonData['success']) {
-        final cities = jsonData['data'] as List;
+    try {
+      final response = await http.get(Uri.parse(ApiConnection.mapCities));
 
-        final markersJS = cities.map((city) {
-          final cityId = city['city_id'];
-          final lat = city['lat'];
-          final lon = city['lon'];
-          final cityName = jsonEncode(city['city_name']);
-          final count = city['patient_count'];
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success']) {
+          final cities = jsonData['data'] as List;
+          final htmlContent = _buildHtmlContent(cities);
+          await _controller.loadHtmlString(htmlContent);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading map data: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
-          return '''
-            const marker$cityId = new tt.Marker().setLngLat([$lon, $lat]).addTo(map);
-            const popup$cityId = new tt.Popup({ offset: 30 }).setHTML("<b>" + $cityName + "</b><br/>Patients: $count");
-            marker$cityId.setPopup(popup$cityId);
-          ''';
-        }).join();
+  String _buildHtmlContent(List<dynamic> cities) {
+    final markersJS = cities.map((city) {
+      final cityId = city['city_id'];
+      final lat = city['lat'];
+      final lon = city['lon'];
+      final cityName = jsonEncode(city['city_name']);
+      final count = city['patient_count'];
 
-        final htmlContent =
-            '''
+      return '''
+        const markerElement$cityId = document.createElement('div');
+        markerElement$cityId.className = 'circle-marker';
+        
+        const marker$cityId = new tt.Marker({
+          element: markerElement$cityId,
+          anchor: 'center'
+        }).setLngLat([$lon, $lat]).addTo(map);
+        
+        const popup$cityId = new tt.Popup({ offset: 25 }).setHTML(
+          '<div class="popup-content">' +
+            '<h4>' + $cityName + '</h4>' +
+            '<p>Patients: $count</p>' +
+          '</div>'
+        );
+        marker$cityId.setPopup(popup$cityId);
+      ''';
+    }).join();
+
+    return '''
 <!DOCTYPE html>
 <html>
 <head>
@@ -391,36 +461,104 @@ class _TomTomWebMapState extends State<_TomTomWebMap> {
         padding: 0;
         height: 100%;
         width: 100%;
+        touch-action: none;
+      }
+      
+      body:fullscreen #map {
+        touch-action: auto;
+      }
+      
+      .circle-marker {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background-color: #42a5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        border: 2px solid white;
+      }
+      
+      .popup-content {
+        font-family: Arial, sans-serif;
+        padding: 8px;
+      }
+      
+      .popup-content h4 {
+        margin: 0 0 4px 0;
+        font-size: 14px;
+        color: #333;
+      }
+      
+      .popup-content p {
+        margin: 0;
+        font-size: 12px;
+        color: #666;
       }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <script>
+        // Initialize map
         const map = tt.map({
             key: '${widget.apiKey}',
             container: 'map',
-            center: [121.0, 14.6],
-            zoom: 5,
+            center: [122.937894, 12.509089],
+            zoom: 3.5,
             style: 'https://api.tomtom.com/style/2/custom/style/dG9tdG9tQEBAVzVIak5Sa1psMEl5Y1VjUDu-_JasLpVOe7ObWhVQUtMj/drafts/0.json?key=${widget.apiKey}'
         });
 
+        // Add controls
         map.addControl(new tt.FullscreenControl());
-        map.addControl(new tt.NavigationControl());
 
+        // Add markers
         $markersJS
+        
+        // Handle fullscreen changes
+        function handleFullscreenChange() {
+          if (!document.fullscreenElement) {
+            map.dragPan.disable();
+            map.touchZoomRotate.disable();
+            map.doubleClickZoom.disable();
+            map.scrollZoom.disable();
+          } else {
+            map.dragPan.enable();
+            map.touchZoomRotate.enable();
+            map.doubleClickZoom.enable();
+            map.scrollZoom.enable();
+          }
+        }
+        
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        handleFullscreenChange(); // Initialize
+        
+        // Reload map when page becomes visible
+        document.addEventListener('visibilitychange', function() {
+          if (!document.hidden) {
+            map.resize();
+          }
+        });
+        
+        // Handle page reload
+        window.addEventListener('pageshow', function() {
+          map.resize();
+        });
     </script>
 </body>
 </html>
 ''';
+  }
 
-        _controller.loadHtmlString(htmlContent);
-      }
-    }
-
-    setState(() {
-      _isLoading = false;
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Reload data when screen becomes active again
+    _loadCityData();
   }
 
   @override
